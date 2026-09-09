@@ -76,7 +76,7 @@ export async function captureMap(
   // ---- caption strip ----
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, src.height, out.width, STRIP);
-  ctx.fillStyle = "#14171a";
+  ctx.fillStyle = "#111815";
   ctx.fillRect(0, src.height, out.width, Math.max(1, Math.round(2 * dpr)));
 
   const pad = Math.round(16 * dpr);
@@ -88,8 +88,8 @@ export async function captureMap(
   const barPx = barMetres / mpp;
   const barY = src.height + Math.round(40 * dpr);
 
-  ctx.strokeStyle = "#14171a";
-  ctx.fillStyle = "#14171a";
+  ctx.strokeStyle = "#111815";
+  ctx.fillStyle = "#111815";
   ctx.lineWidth = Math.max(1, Math.round(1.5 * dpr));
   ctx.beginPath();
   ctx.moveTo(pad, barY - Math.round(5 * dpr));

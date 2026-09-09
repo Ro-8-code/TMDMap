@@ -115,7 +115,7 @@ function styleFor(layerId: LayerId): string | StyleSpecification {
       },
     },
     layers: [
-      { id: "bg", type: "background" as const, paint: { "background-color": "#1c2024" } },
+      { id: "bg", type: "background" as const, paint: { "background-color": "#1c2521" } },
       { id: "base", type: "raster" as const, source: "base" },
     ],
   };
@@ -250,7 +250,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     map.flyTo({ center: [hit.lon, hit.lat], zoom: hit.zoom, duration: 1400 });
 
     markerRef.current?.remove();
-    markerRef.current = new maplibregl.Marker({ color: "#ffb400" })
+    markerRef.current = new maplibregl.Marker({ color: "#1a7a53" })
       .setLngLat([hit.lon, hit.lat])
       .addTo(map);
   }, []);
