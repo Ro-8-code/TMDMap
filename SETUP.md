@@ -95,11 +95,17 @@ Open <http://localhost:3100>.
 3. The map flies to it and drops an amber pin.
 4. Pick a basemap on the left — **OS Leisure** for the classic OS look,
    **OS Outdoor** when he needs more detail at close zoom.
-5. Zoom/pan to frame the site, then `Cmd+Shift+4` and drag to screenshot
-   straight into AutoCAD.
+5. Click a scale — **1:200**, **1:500**, **1:1250** or **1:2500** — to snap the
+   view to a standard drawing scale.
+6. Click **Export PNG**. That beats a screenshot: you get the map at full
+   resolution with no UI over it, and a caption strip burned in along the
+   bottom with a scale bar, the National Grid reference, the coordinates and
+   the OS attribution.
 
-The scale bar bottom-right and the lat/lon readout bottom-left both appear in
-the screenshot, which gives the AutoCAD import something to scale against.
+**Getting it to scale in AutoCAD.** Insert the PNG, then use `SCALE` with the
+Reference option and draw along the scale bar in the caption strip — type the
+bar's stated length as the new length. The raster is then at true ground
+scale. The metres-per-pixel figure in the strip is there as a cross-check.
 
 > **Zoom tip.** OS Leisure runs out of detail at zoom 16 (that's the limit of
 > the 1:25k product) and will look soft past that. Switch to **OS Outdoor** for

@@ -13,6 +13,11 @@ postcode, land on the site, capture the map into AutoCAD.
   street names, place names and building numbers.
 - **Maps.** Five basemaps: OS Leisure (1:25k/1:50k paper style), OS Outdoor,
   OS Road, OS Light, and OpenStreetMap as a no-key fallback.
+- **Scale lock.** One click snaps the view to 1:200, 1:500, 1:1250 or 1:2500,
+  the standard UK drawing-office scales.
+- **Export PNG.** Downloads the map at full device resolution with no UI over
+  it, and a caption strip burned in carrying the scale bar, National Grid
+  reference, coordinates and attribution.
 
 ## Stack
 
@@ -32,6 +37,17 @@ No paid services.
   hits are ranked first, since that's how a site usually gets identified.
   Proxied server-side so Nominatim gets the identifying User-Agent its usage
   policy requires.
+- **`lib/osgb.ts`** — WGS84 lat/lon to an OSGB36 National Grid reference, the
+  full way: a Helmert transformation onto Airy 1830 followed by the National
+  Grid transverse Mercator projection. Traffic management drawings are
+  dimensioned against the National Grid, so an approximation won't do.
+  Verified to the metre against Buckingham Palace, Ben Nevis, Cardiff Castle
+  and Deansgate.
+- **`lib/capture.ts`** — the export. Once a raster is in AutoCAD there is no
+  metadata left, so anything the drawing needs has to be pixels in the image:
+  a scale bar of known ground length, the grid reference, and the exact
+  metres-per-pixel. Scaling the raster against the bar is reliable whatever
+  DPI the export happened at.
 - **`middleware.ts`** — gates `/map` behind a session and bounces signed-in
   users away from the auth pages. If Supabase env vars are absent it stands
   down entirely, so the app still boots and shows a setup message rather than

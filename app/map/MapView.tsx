@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { Map as MLMap } from "maplibre-gl";
 import { Brand } from "../brand";
+import { gridRef } from "@/lib/osgb";
+import { captureFilename, captureMap, metresPerPixel, zoomForScale } from "@/lib/capture";
 
 type Hit = {
   id: string;
@@ -70,6 +72,10 @@ const LAYERS: {
   },
 ];
 
+// Standard UK drawing-office scales. Picking one sets the zoom so the map
+// draws at that scale on a 96 DPI display.
+const SCALES = [200, 500, 1250, 2500] as const;
+
 function styleFor(layerId: LayerId) {
   const layer = LAYERS.find((l) => l.id === layerId) ?? LAYERS[0];
   return {
@@ -106,6 +112,9 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   const [searching, setSearching] = useState(false);
   const [active, setActive] = useState(0);
   const [readout, setReadout] = useState({ lat: 54.5, lon: -3.2, zoom: 6 });
+  const [label, setLabel] = useState("");
+  const [capturing, setCapturing] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
   /* ------------------------------- the map ------------------------------- */
 
@@ -119,6 +128,8 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
       zoom: 5.4,
       maxZoom: 20,
       attributionControl: false,
+      // Required so the drawing buffer can still be read when we export.
+      preserveDrawingBuffer: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -205,6 +216,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     setOpen(false);
     suppressSearch.current = true;
     setQuery(hit.label);
+    setLabel(hit.sub ? `${hit.label} — ${hit.sub.split(", ").slice(0, 2).join(", ")}` : hit.label);
     inputRef.current?.blur();
 
     map.flyTo({ center: [hit.lon, hit.lat], zoom: hit.zoom, duration: 1400 });
@@ -214,6 +226,46 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
       .setLngLat([hit.lon, hit.lat])
       .addTo(map);
   }, []);
+
+  const applyScale = useCallback((scale: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const z = zoomForScale(scale, map.getCenter().lat);
+    map.easeTo({ zoom: Math.min(z, map.getMaxZoom()), duration: 500 });
+  }, []);
+
+  const onCapture = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || capturing) return;
+
+    setCapturing(true);
+    setNote(null);
+    try {
+      const blob = await captureMap(map, label || query);
+      const c = map.getCenter();
+      const name = captureFilename(label || query, c.lat, c.lng);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setNote(`Saved ${name}`);
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Export failed.");
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing, label, query]);
+
+  // Clear the toast after a few seconds so it doesn't sit over the map.
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 4000);
+    return () => clearTimeout(t);
+  }, [note]);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || hits.length === 0) {
@@ -303,6 +355,16 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
 
         <div className="spacer" />
 
+        <button
+          className="linkbtn linkbtn-primary"
+          type="button"
+          onClick={onCapture}
+          disabled={capturing}
+          title="Download a PNG of this view, with scale bar and grid reference burned in"
+        >
+          {capturing ? "Exporting…" : "Export PNG"}
+        </button>
+
         <form action="/auth/signout" method="post">
           <button className="linkbtn" type="submit">
             Sign out
@@ -313,6 +375,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
       <div className="map-area">
         <div id="map" ref={containerRef} />
 
+        <div className="side-panel">
         <div className="layers">
           <div className="layers-title">Basemap</div>
           {LAYERS.map((l) => (
@@ -331,6 +394,26 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
           ))}
         </div>
 
+        <div className="scales">
+          <div className="layers-title">Scale</div>
+          <div className="scale-row">
+            {SCALES.map((sc) => (
+              <button
+                key={sc}
+                type="button"
+                className="scale-btn"
+                data-active={Math.abs(readout.zoom - zoomForScale(sc, readout.lat)) < 0.05}
+                onClick={() => applyScale(sc)}
+              >
+                1:{sc}
+              </button>
+            ))}
+          </div>
+        </div>
+        </div>
+
+        {note && <div className="toast">{note}</div>}
+
         {!osConfigured && (
           <div className="banner msg msg-warn">
             No OS Data Hub key set — showing OpenStreetMap. Add{" "}
@@ -344,7 +427,11 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
             {readout.lon.toFixed(5)}
           </div>
           <div className="chip">
-            <b>Zoom</b> {readout.zoom.toFixed(1)}
+            <b>NGR</b> {gridRef(readout.lat, readout.lon, 5) ?? "outside GB"}
+          </div>
+          <div className="chip">
+            <b>Scale</b> 1:
+            {Math.round(metresPerPixel(readout.lat, readout.zoom) / (0.0254 / 96))}
           </div>
         </div>
 
