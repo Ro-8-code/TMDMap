@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl, { Map as MLMap } from "maplibre-gl";
+import maplibregl, { Map as MLMap, type StyleSpecification } from "maplibre-gl";
 import { Brand } from "../brand";
 import { gridRef } from "@/lib/osgb";
 import { captureFilename, captureMap, metresPerPixel, zoomForScale } from "@/lib/capture";
@@ -16,16 +16,36 @@ type Hit = {
   source: "postcode" | "osm";
 };
 
-type LayerId = "leisure" | "outdoor" | "road" | "light" | "osm";
+type LayerId = "ngd-cad" | "ngd" | "leisure" | "outdoor" | "road" | "light" | "osm";
 
-const LAYERS: {
+type LayerDef = {
   id: LayerId;
   name: string;
   note: string;
-  tiles: string[];
-  maxzoom: number;
   attribution: string;
-}[] = [
+  /** Vector styles are fetched by URL; raster ones are built from tiles. */
+  styleUrl?: string;
+  tiles?: string[];
+  maxzoom?: number;
+};
+
+const OS_ATTRIB = "Contains OS data \u00a9 Crown copyright and database right";
+
+const LAYERS: LayerDef[] = [
+  {
+    id: "ngd-cad",
+    name: "OS NGD — linework",
+    note: "MasterMap detail, drawing style",
+    styleUrl: "/api/ngd-style?mode=cad",
+    attribution: OS_ATTRIB,
+  },
+  {
+    id: "ngd",
+    name: "OS NGD — full colour",
+    note: "Same detail, OS styling",
+    styleUrl: "/api/ngd-style?mode=original",
+    attribution: OS_ATTRIB,
+  },
   {
     id: "leisure",
     name: "OS Leisure",
@@ -76,16 +96,21 @@ const LAYERS: {
 // draws at that scale on a 96 DPI display.
 const SCALES = [200, 500, 1250, 2500] as const;
 
-function styleFor(layerId: LayerId) {
+function styleFor(layerId: LayerId): string | StyleSpecification {
   const layer = LAYERS.find((l) => l.id === layerId) ?? LAYERS[0];
+
+  // MapLibre accepts a style URL directly, so vector basemaps just hand it the
+  // proxy endpoint and let it fetch.
+  if (layer.styleUrl) return layer.styleUrl;
+
   return {
     version: 8 as const,
     sources: {
       base: {
         type: "raster" as const,
-        tiles: layer.tiles,
+        tiles: layer.tiles!,
         tileSize: 256,
-        maxzoom: layer.maxzoom,
+        maxzoom: layer.maxzoom ?? 19,
         attribution: layer.attribution,
       },
     },
@@ -105,7 +130,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
 
   // Default to OS Leisure, unless there's no OS key — then OSM, so the map
   // is never a blank grey rectangle on a fresh deploy.
-  const [layerId, setLayerId] = useState<LayerId>(osConfigured ? "leisure" : "osm");
+  const [layerId, setLayerId] = useState<LayerId>(osConfigured ? "ngd-cad" : "osm");
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   const [open, setOpen] = useState(false);
@@ -116,6 +141,9 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   const [capturing, setCapturing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
+  // Held in a ref so the export callback doesn't re-create on every layer swap.
+  const attributionRef = useRef(LAYERS[0].attribution);
+
   /* ------------------------------- the map ------------------------------- */
 
   useEffect(() => {
@@ -123,7 +151,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: styleFor(osConfigured ? "leisure" : "osm"),
+      style: styleFor(osConfigured ? "ngd-cad" : "osm"),
       center: [-3.2, 54.5], // roughly centred on Great Britain
       zoom: 5.4,
       maxZoom: 20,
@@ -241,7 +269,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     setCapturing(true);
     setNote(null);
     try {
-      const blob = await captureMap(map, label || query);
+      const blob = await captureMap(map, label || query, attributionRef.current);
       const c = map.getCenter();
       const name = captureFilename(label || query, c.lat, c.lng);
 
@@ -296,6 +324,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   }, []);
 
   const currentLayer = LAYERS.find((l) => l.id === layerId)!;
+  attributionRef.current = currentLayer.attribution;
 
   /* -------------------------------- render ------------------------------- */
 

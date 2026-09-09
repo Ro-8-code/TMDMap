@@ -31,32 +31,45 @@ Three things to do, in order. Roughly 20 minutes total. Everything below is free
 
 ## 2. Ordnance Survey Data Hub — the maps
 
-1. Go to <https://osdatahub.os.uk> and **Sign up** (free account).
-2. Once in, go to **API Dashboard → My Projects → Add project**. Call it
-   `tmdmap`.
-3. Add the **OS Maps API** to the project.
-4. Copy the **Project API Key** → `OS_API_KEY`.
+**Choose the Premium plan, not OpenData.** This is the part that decides
+whether the drawings look like Vision's or not, so it's worth getting right.
 
-**What you get for free.** Every OS Data Hub account includes a monthly free
-allowance that covers OS *Premium* data, not just OpenData. That's what makes
-the **Leisure** layer — the actual 1:25,000 Explorer and 1:50,000 Landranger
-paper-map styling — available at no cost at the volume one or two people will
-use. The other three layers (Outdoor, Road, Light) are OpenData and free
-outright.
+1. Go to <https://osdatahub.os.uk> and **Sign up**.
+2. **API Dashboard → My Projects → Add project**, call it `tmdmap`.
+3. Add **OS NGD API – Tiles** to the project. This is the important one.
+4. Also add **OS Maps API** — that drives the simpler raster backdrops, which
+   are still handy for a wider location plan.
+5. Make sure the project is set to **Live** mode, not Development. Development
+   mode is free but explicitly cannot be used in a live application.
+6. Copy the **Project API Key** → `OS_API_KEY`.
 
-Check your usage occasionally under **Dashboard → Usage**. If you ever get
-close to the allowance, OS will tell you before it charges anything.
+### Why NGD, and why it matters
 
-**Licensing — read this before issuing a drawing.** Capturing OS mapping into
-a drawing you send to a paying client is *commercial* use. The free Data Hub
-allowance covers the API calls; it does not by itself grant you the right to
-redistribute OS mapping inside a deliverable. Check the OS licence terms for
-your use case, or talk to OS about a Partner/Contractor licence. Every layer in
-the app carries the required
-`Contains OS data © Crown copyright and database right` attribution on screen,
-so it appears in the screenshot.
+OS Leisure and OS Outdoor are *leisure* products — walking maps. They are
+raster pictures, and no amount of resolution turns them into a survey drawing.
 
----
+**OS NGD API – Tiles** serves the OS National Geographic Database, the
+successor to OS MasterMap Topography Layer: individual building footprints,
+both kerb lines of every road, pavement edges, property boundaries, house
+numbers. It arrives as *vector*, so the app restyles it into thin grey
+linework — the drawing backdrop the competitor PDFs are built on.
+
+### What it costs
+
+OS Data Hub's Premium plan includes **£1,000 of premium data per month, free**,
+and OS state that allowance covers building products and services for third
+parties. At one or two people producing drawings, you will not get near it.
+
+Watch **Dashboard → Usage** for the first month to see where you actually land.
+OS warn you before anything is charged; nothing bills silently.
+
+### Licensing — still worth a phone call
+
+The free allowance covers the API transactions. Putting OS mapping into a
+drawing you invoice a client for is commercial redistribution, which is a
+separate question from usage limits. Every basemap carries the required
+`Contains OS data © Crown copyright and database right` attribution on screen
+and in the PNG export, but check the terms for your use case with OS directly.
 
 ## 3. Run it
 

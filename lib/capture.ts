@@ -31,7 +31,11 @@ function niceBarLength(maxMetres: number) {
  * have to be pixels in the image itself. Scaling the raster against a known
  * ground length is the reliable way in, whatever DPI the export happened at.
  */
-export async function captureMap(map: MLMap, label: string): Promise<Blob> {
+export async function captureMap(
+  map: MLMap,
+  label: string,
+  attribution: string
+): Promise<Blob> {
   const src = map.getCanvas();
   const centre = map.getCenter();
   const zoom = map.getZoom();
@@ -119,9 +123,6 @@ export async function captureMap(map: MLMap, label: string): Promise<Blob> {
   ctx.fillText(detail, pad + Math.round(220 * dpr), baseY);
 
   // Attribution, right-aligned — it has to travel with the image.
-  const attribution =
-    (map.getStyle().sources?.base as { attribution?: string } | undefined)
-      ?.attribution ?? "";
   ctx.textAlign = "right";
   ctx.font = `${Math.round(10 * dpr)}px ui-sans-serif, system-ui, sans-serif`;
   ctx.fillText(attribution, out.width - pad, src.height + Math.round(48 * dpr));

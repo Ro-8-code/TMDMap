@@ -11,8 +11,9 @@ postcode, land on the site, capture the map into AutoCAD.
   clicked before sign-in works. Sessions handled by Supabase Auth.
 - **Search.** One box, Google-Maps style. Full postcodes, partial postcodes,
   street names, place names and building numbers.
-- **Maps.** Five basemaps: OS Leisure (1:25k/1:50k paper style), OS Outdoor,
-  OS Road, OS Light, and OpenStreetMap as a no-key fallback.
+- **Maps.** OS NGD vector (MasterMap-grade detail) in either drawing linework
+  or full OS styling, plus the OS Maps raster backdrops (Leisure, Outdoor,
+  Road, Light) and OpenStreetMap as a no-key fallback.
 - **Scale lock.** One click snaps the view to 1:200, 1:500, 1:1250 or 1:2500,
   the standard UK drawing-office scales.
 - **Export PNG.** Downloads the map at full device resolution with no UI over
@@ -48,6 +49,15 @@ No paid services.
   a scale bar of known ground length, the grid reference, and the exact
   metres-per-pixel. Scaling the raster against the bar is reliable whatever
   DPI the export happened at.
+- **`lib/cadStyle.ts`** — turns an OS vector style into survey linework. OS's
+  source-layer names aren't documented and would rot as their schema changes,
+  so this rewrites the style by layer *type* instead: fills lose their colour
+  and keep an outline, lines thin to pen strokes, icons go. Building footprints
+  come out as footprints whatever OS called the layer.
+- **`app/api/ngd-style/route.ts`** — fetches OS's own stylesheet, points every
+  URL in it back at our proxy so the key stays server-side, then applies the
+  transform. Deriving from the live style means new OS layers appear on their
+  own.
 - **`middleware.ts`** — gates `/map` behind a session and bounces signed-in
   users away from the auth pages. If Supabase env vars are absent it stands
   down entirely, so the app still boots and shows a setup message rather than
