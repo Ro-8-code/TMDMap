@@ -15,6 +15,36 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
+/**
+ * Nominatim's usage policy allows at most one request per second and asks for
+ * an identifying User-Agent. Both are our responsibility here: if this proxy
+ * gets hammered under our User-Agent, OSM blocks us and search stops working
+ * for everyone. So results are cached, and calls out to Nominatim are spaced.
+ *
+ * This state is per-instance, and serverless spreads traffic across instances,
+ * so it isn't a hard guarantee — it's a large reduction in outbound calls
+ * rather than a strict limiter.
+ */
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_MAX = 500;
+const cache = new Map<string, { at: number; body: unknown }>();
+
+let nominatimChain: Promise<unknown> = Promise.resolve();
+let lastNominatimAt = 0;
+
+/** Queues a call so consecutive Nominatim requests are at least 1s apart. */
+function spaced<T>(fn: () => Promise<T>): Promise<T> {
+  const run = nominatimChain.then(async () => {
+    const wait = 1000 - (Date.now() - lastNominatimAt);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastNominatimAt = Date.now();
+    return fn();
+  });
+  // Keep the chain alive even if this link rejects.
+  nominatimChain = run.catch(() => undefined);
+  return run;
+}
+
 type Hit = {
   id: string;
   label: string;
@@ -125,13 +155,15 @@ async function osmHits(q: string): Promise<Hit[]> {
     url.searchParams.set("addressdetails", "1");
     url.searchParams.set("limit", "6");
 
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "TMDMap/1.0 (tmdmap.services)",
-        "Accept-Language": "en-GB",
-      },
-      cache: "no-store",
-    });
+    const r = await spaced(() =>
+      fetch(url, {
+        headers: {
+          "User-Agent": "TMDMap/1.0 (tmdmap.services)",
+          "Accept-Language": "en-GB",
+        },
+        cache: "no-store",
+      })
+    );
     if (!r.ok) return [];
     const rows = await r.json();
     if (!Array.isArray(rows)) return [];
@@ -139,7 +171,9 @@ async function osmHits(q: string): Promise<Hit[]> {
     return rows.map((row: any): Hit => {
       const parts: string[] = String(row.display_name).split(", ");
       return {
-        id: `osm:${row.osm_type}:${row.osm_id}`,
+        // Not every Nominatim row carries osm_type/osm_id (postcode centroids
+        // in particular), but place_id is always present and unique.
+        id: `osm:${row.place_id ?? `${row.lat},${row.lon}`}`,
         label: row.name || parts[0],
         sub: parts.slice(1).join(", "),
         lat: Number(row.lat),
@@ -160,8 +194,28 @@ async function osmHits(q: string): Promise<Hit[]> {
 }
 
 export async function GET(request: NextRequest) {
+  // Same-origin only, so the proxy can't be used as a free geocoder by anyone
+  // who finds the URL — it's our OSM reputation on the line.
+  const origin = request.headers.get("origin") ?? request.headers.get("referer");
+  if (origin) {
+    const host = request.headers.get("host");
+    try {
+      if (host && new URL(origin).host !== host) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+    } catch {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) return NextResponse.json({ results: [] });
+
+  const key = q.toLowerCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    return NextResponse.json(hit.body);
+  }
 
   const [pc, osm] = await Promise.all([postcodeHits(q), osmHits(q)]);
 
@@ -173,5 +227,14 @@ export async function GET(request: NextRequest) {
     return Number.isFinite(h.lat) && Number.isFinite(h.lon);
   });
 
-  return NextResponse.json({ results: results.slice(0, 8) });
+  const body = { results: results.slice(0, 8) };
+
+  // Cheap bounded cache: drop the oldest entry once it's full.
+  if (cache.size >= CACHE_MAX) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, { at: Date.now(), body });
+
+  return NextResponse.json(body);
 }
