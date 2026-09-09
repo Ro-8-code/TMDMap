@@ -113,12 +113,28 @@ export function rewriteUrls(style: AnyStyle, base: string): AnyStyle {
   const sources: AnyStyle["sources"] = {};
   for (const [id, source] of Object.entries(style.sources ?? {})) {
     const copy: Record<string, unknown> = { ...source };
+
     if (Array.isArray(copy.tiles)) {
       copy.tiles = (copy.tiles as string[]).map(proxy);
     }
+
     if (typeof copy.url === "string") {
-      copy.url = proxy(copy.url);
+      // OS point the source at an OGC tileset document rather than TileJSON,
+      // which MapLibre can't read — and following it would hand the browser
+      // tile URLs with our key in them. Build the tile template directly
+      // instead. OS order the path tileMatrix/tileRow/tileCol, so it's
+      // {z}/{y}/{x}, not the {z}/{x}/{y} nearly every other service uses.
+      const tileset = copy.url.match(
+        /^https:\/\/api\.os\.uk\/(.+?\/tiles\/[^/?]+)(\?.*)?$/
+      );
+      if (tileset) {
+        copy.tiles = [`${base}/api/os/${tileset[1]}/{z}/{y}/{x}`];
+        delete copy.url;
+      } else {
+        copy.url = proxy(copy.url);
+      }
     }
+
     sources[id] = copy;
   }
 

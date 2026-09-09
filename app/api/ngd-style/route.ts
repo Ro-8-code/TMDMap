@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "OS_API_KEY not configured" }, { status: 404 });
   }
 
-  const styleId = request.nextUrl.searchParams.get("style") ?? "Light";
+  // OS key their styles by tile matrix set, not by name: "3857" is the
+  // Web Mercator one, "27700" is British National Grid.
+  const styleId = request.nextUrl.searchParams.get("style") ?? "3857";
   const mode = request.nextUrl.searchParams.get("mode") ?? "cad";
 
   const upstream = await fetch(`${NGD_BASE}/styles/${encodeURIComponent(styleId)}?key=${key}`, {
