@@ -3,7 +3,9 @@ import { supabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
-  if (!supabaseConfigured) redirect("/login");
+  // With no auth backend there is nothing to sign in to, and the login page
+  // is a dead end. Send people to the map instead.
+  if (!supabaseConfigured) redirect("/map");
 
   const supabase = await createClient();
   const {
