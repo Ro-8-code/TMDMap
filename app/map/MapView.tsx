@@ -460,6 +460,17 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
           </button>
         )}
 
+        {!clean && readout.zoom < 15 && (
+          <div className="empty-state">
+            <div className="empty-title">Search a site to begin</div>
+            <p>
+              Type an address, street or postcode above. Ordnance Survey
+              topography is only published from zoom 15 — at this scale the map
+              is intentionally near-empty.
+            </p>
+          </div>
+        )}
+
         {note && <div className="toast">{note}</div>}
 
         {!osConfigured && (
@@ -483,7 +494,25 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
           </div>
         </div>
 
-        <div className="attrib">{currentLayer.attribution}</div>
+        {/* OS API Service Terms clause 6.3 requires the copyright
+            acknowledgement and a prominent link to their Errors and Omissions
+            tool wherever their data is used. Both stay visible in screenshot
+            mode so the acknowledgement lands inside the captured image. */}
+        <div className="attrib">
+          {currentLayer.attribution}
+          {currentLayer.id.startsWith("ngd") || currentLayer.id !== "osm" ? (
+            <>
+              {" · "}
+              <a
+                href="https://osdatahub.os.uk/errorsAndOmissions/reporting"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Report a map error
+              </a>
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );

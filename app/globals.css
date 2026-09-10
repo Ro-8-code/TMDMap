@@ -528,3 +528,66 @@ input::placeholder { color: var(--text-faint); }
   transition: opacity 0.15s;
 }
 .exit-clean:hover { opacity: 1; color: var(--text); }
+
+.attrib a { color: var(--text-dim); text-decoration: underline; }
+.attrib a:hover { color: var(--text); }
+
+/* ------------------------------ empty state ----------------------------- */
+
+/* OS only publish detailed topography from zoom 15, so a zoomed-out map is a
+   blank white page. Saying so beats letting it look broken. */
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  max-width: 340px;
+  padding: 20px 24px;
+  text-align: center;
+  background: rgba(20, 27, 24, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--ink-600);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-text);
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* ------------------------------ small screens --------------------------- */
+
+@media (max-width: 720px) {
+  /* Stack the footer so the readout, scale bar and attribution stop
+     overlapping each other on a phone. */
+  .readout {
+    left: 8px;
+    right: 8px;
+    bottom: 34px;
+    gap: 4px;
+  }
+  .chip { font-size: 10.5px; padding: 4px 7px; }
+
+  .attrib {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    font-size: 9.5px;
+    text-align: center;
+  }
+
+  .maplibregl-ctrl-bottom-right { bottom: 58px !important; }
+
+  .empty-state { max-width: calc(100% - 48px); }
+}
