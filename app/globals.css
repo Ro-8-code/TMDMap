@@ -571,13 +571,19 @@ input::placeholder { color: var(--text-faint); }
 @media (max-width: 720px) {
   /* Stack the footer so the readout, scale bar and attribution stop
      overlapping each other on a phone. */
+  /* One scrolling row rather than wrapping — wrapped chips grew into the
+     attribution underneath them. */
   .readout {
     left: 8px;
     right: 8px;
-    bottom: 34px;
+    bottom: 30px;
     gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  .chip { font-size: 10.5px; padding: 4px 7px; }
+  .readout::-webkit-scrollbar { display: none; }
+  .chip { font-size: 10.5px; padding: 4px 7px; white-space: nowrap; flex: none; }
 
   .attrib {
     left: 8px;
