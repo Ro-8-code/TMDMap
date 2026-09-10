@@ -1,9 +1,18 @@
 import type { Map as MLMap } from "maplibre-gl";
 import { gridRef } from "./osgb";
 
-/** Metres of ground per screen pixel, at a given latitude and zoom. */
+/**
+ * Metres of ground per CSS pixel at a given latitude and zoom.
+ *
+ * The constant is 78271.5, not the 156543.03392 that most snippets quote.
+ * That figure assumes 256px tiles; MapLibre's zoom is defined against 512px
+ * tiles and renders at half that scale. With the wrong constant every scale
+ * came out exactly twice what it claimed — a view labelled 1:500 was really
+ * 1:250, and the metres-per-pixel burned into PNG exports was doubled too.
+ * Measured against the map to confirm.
+ */
 export function metresPerPixel(lat: number, zoom: number) {
-  return (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
+  return (78271.516964 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
 }
 
 /**
@@ -12,7 +21,7 @@ export function metresPerPixel(lat: number, zoom: number) {
  */
 export function zoomForScale(scale: number, lat: number) {
   const metresPerCssPixel = (0.0254 / 96) * scale;
-  return Math.log2((156543.03392 * Math.cos((lat * Math.PI) / 180)) / metresPerCssPixel);
+  return Math.log2((78271.516964 * Math.cos((lat * Math.PI) / 180)) / metresPerCssPixel);
 }
 
 /** A round scale-bar length that fits comfortably inside `maxPx` pixels. */
