@@ -576,7 +576,8 @@ input::placeholder { color: var(--text-faint); }
   .readout {
     left: 8px;
     right: 8px;
-    bottom: 30px;
+    /* Clear of the attribution, which wraps to two lines at this width. */
+    bottom: 52px;
     gap: 4px;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -593,7 +594,7 @@ input::placeholder { color: var(--text-faint); }
     text-align: center;
   }
 
-  .maplibregl-ctrl-bottom-right { bottom: 58px !important; }
+  .maplibregl-ctrl-bottom-right { bottom: 84px !important; }
 
   .empty-state { max-width: calc(100% - 48px); }
 }
