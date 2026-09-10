@@ -145,6 +145,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   const [capturing, setCapturing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [clean, setClean] = useState(false);
+  const [exportingDxf, setExportingDxf] = useState(false);
 
   // Held in a ref so the export callback doesn't re-create on every layer swap.
   const attributionRef = useRef(LAYERS[0].attribution);
@@ -300,6 +301,51 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     }
   }, [capturing, label, query]);
 
+  const onExportDxf = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || exportingDxf) return;
+
+    if (map.getZoom() < 16) {
+      setNote("Zoom in to at least 1:2500 — OS only publish detail from zoom 16.");
+      return;
+    }
+
+    setExportingDxf(true);
+    setNote(null);
+    try {
+      const b = map.getBounds();
+      const q = new URLSearchParams({
+        west: String(b.getWest()),
+        south: String(b.getSouth()),
+        east: String(b.getEast()),
+        north: String(b.getNorth()),
+        zoom: String(Math.round(map.getZoom())),
+      });
+
+      const res = await fetch(`/api/export/dxf?${q}`);
+      if (!res.ok) {
+        setNote(await res.text());
+        return;
+      }
+
+      const name =
+        res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "site.dxf";
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setNote(`Saved ${name} — ${res.headers.get("X-TMD-Entities") ?? "?"} entities`);
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "DXF export failed.");
+    } finally {
+      setExportingDxf(false);
+    }
+  }, [exportingDxf]);
+
   // Clear the toast after a few seconds so it doesn't sit over the map.
   useEffect(() => {
     if (!note) return;
@@ -407,6 +453,16 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         <div className="spacer" />
 
         <button
+          className="linkbtn linkbtn-primary"
+          type="button"
+          onClick={onExportDxf}
+          disabled={exportingDxf}
+          title="Download CAD linework in British National Grid metres, ready to open at 1:1 in AutoCAD"
+        >
+          {exportingDxf ? "Building DXF…" : "Export DXF"}
+        </button>
+
+        <button
           className="linkbtn"
           type="button"
           onClick={() => setClean(true)}
@@ -416,7 +472,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         </button>
 
         <button
-          className="linkbtn linkbtn-primary"
+          className="linkbtn"
           type="button"
           onClick={onCapture}
           disabled={capturing}
