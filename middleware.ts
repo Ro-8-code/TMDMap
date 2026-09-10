@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "./lib/supabase/env";
+import { emailAllowed } from "./lib/apiAuth";
 
 const PROTECTED = ["/map"];
 const AUTH_PAGES = ["/login", "/signup"];
@@ -38,7 +39,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && AUTH_PAGES.some((p) => path.startsWith(p))) {
+  // An account that exists but isn't on the allowlist gets bounced rather than
+  // shown a map it can't load tiles for.
+  if (user && !emailAllowed(user.email) && PROTECTED.some((p) => path.startsWith(p))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("denied", "1");
+    return NextResponse.redirect(url);
+  }
+
+  if (user && emailAllowed(user.email) && AUTH_PAGES.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/map";
     url.search = "";

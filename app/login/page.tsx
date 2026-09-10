@@ -17,6 +17,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
 
   const justVerified = params.get("verified") === "1";
+  const denied = params.get("denied") === "1";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +60,13 @@ function LoginForm() {
       {justVerified && (
         <div className="msg msg-ok">
           Email verified. Sign in below to get started.
+        </div>
+      )}
+
+      {denied && (
+        <div className="msg msg-error">
+          That account doesn&apos;t have access to this site. Ask the
+          administrator to add your email address.
         </div>
       )}
 

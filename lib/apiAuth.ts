@@ -16,6 +16,24 @@ import { supabaseConfigured } from "@/lib/supabase/env";
  * than instantly; that's an acceptable trade for a basemap.
  */
 
+/**
+ * Optional allowlist. Supabase's own "disable signup" toggle is the only thing
+ * that stops an account being created, but it can't stop one being *used* —
+ * and it's a dashboard setting that's easy to leave open by accident. This is
+ * the belt to that braces: whoever holds an account, only these addresses get
+ * past our own routes. Empty means no restriction, which is right for local
+ * development.
+ */
+const ALLOWED = (process.env.ALLOWED_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+export function emailAllowed(email: string | undefined | null): boolean {
+  if (ALLOWED.length === 0) return true;
+  return !!email && ALLOWED.includes(email.toLowerCase());
+}
+
 const TTL_MS = 5 * 60 * 1000;
 const MAX_ENTRIES = 2000;
 const verified = new Map<string, { at: number; userId: string }>();
@@ -70,6 +88,10 @@ export async function requireUser(
 
   if (!user) {
     return { error: new NextResponse("Sign in required", { status: 401 }) };
+  }
+
+  if (!emailAllowed(user.email)) {
+    return { error: new NextResponse("Not authorised for this account", { status: 403 }) };
   }
 
   cacheSet(token, user.id);
