@@ -27,6 +27,8 @@ type LayerDef = {
   styleUrl?: string;
   tiles?: string[];
   maxzoom?: number;
+  /** Lowest zoom the source actually serves. Below it the map renders blank. */
+  minzoom?: number;
 };
 
 const OS_ATTRIB = "Contains OS data \u00a9 Crown copyright and database right";
@@ -37,6 +39,7 @@ const LAYERS: LayerDef[] = [
     name: "OS NGD — linework",
     note: "MasterMap detail, drawing style",
     styleUrl: "/api/ngd-style?mode=cad",
+    minzoom: 6,
     attribution: OS_ATTRIB,
   },
   {
@@ -44,6 +47,7 @@ const LAYERS: LayerDef[] = [
     name: "OS NGD — full colour",
     note: "Same detail, OS styling",
     styleUrl: "/api/ngd-style?mode=original",
+    minzoom: 6,
     attribution: OS_ATTRIB,
   },
   {
@@ -140,6 +144,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   const [label, setLabel] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [clean, setClean] = useState(false);
 
   // Held in a ref so the export callback doesn't re-create on every layer swap.
   const attributionRef = useRef(LAYERS[0].attribution);
@@ -153,7 +158,10 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
       container: containerRef.current,
       style: styleFor(osConfigured ? "ngd-cad" : "osm"),
       center: [-3.2, 54.5], // roughly centred on Great Britain
-      zoom: 5.4,
+      // Must clear the NGD source's minzoom of 6, or the default basemap opens
+      // on a blank white page.
+      zoom: 6.4,
+      minZoom: osConfigured ? 6 : 0,
       maxZoom: 20,
       attributionControl: false,
       // Required so the drawing buffer can still be read when we export.
@@ -188,7 +196,11 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     // races the initial style load and leaves the canvas blank.
     if (!map || layerId === initialLayer.current) return;
     const center = map.getCenter();
-    const zoom = map.getZoom();
+    const layer = LAYERS.find((l) => l.id === layerId);
+    const floor = layer?.minzoom ?? 0;
+    const zoom = Math.max(map.getZoom(), floor);
+
+    map.setMinZoom(floor);
     map.setStyle(styleFor(layerId));
     map.once("styledata", () => {
       map.jumpTo({ center, zoom });
@@ -314,6 +326,16 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     }
   }
 
+  // Escape leaves screenshot mode — there's almost no UI left to click.
+  useEffect(() => {
+    if (!clean) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setClean(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [clean]);
+
   // Close the dropdown on an outside click.
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -329,7 +351,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   /* -------------------------------- render ------------------------------- */
 
   return (
-    <div className="map-shell">
+    <div className={clean ? "map-shell is-clean" : "map-shell"}>
       <header className="topbar">
         <Brand />
 
@@ -385,6 +407,15 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         <div className="spacer" />
 
         <button
+          className="linkbtn"
+          type="button"
+          onClick={() => setClean(true)}
+          title="Hide everything for a clean screenshot (Esc to come back)"
+        >
+          Screenshot mode
+        </button>
+
+        <button
           className="linkbtn linkbtn-primary"
           type="button"
           onClick={onCapture}
@@ -405,41 +436,29 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         <div id="map" ref={containerRef} />
 
         <div className="side-panel">
-        <div className="layers">
-          <div className="layers-title">Basemap</div>
-          {LAYERS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              className="layer-btn"
-              data-active={l.id === layerId}
-              onClick={() => setLayerId(l.id)}
-              disabled={l.id !== "osm" && !osConfigured}
-              title={!osConfigured && l.id !== "osm" ? "Add OS_API_KEY to enable" : l.note}
-            >
-              {l.name}
-              <small>{l.note}</small>
-            </button>
-          ))}
-        </div>
-
-        <div className="scales">
-          <div className="layers-title">Scale</div>
-          <div className="scale-row">
-            {SCALES.map((sc) => (
-              <button
-                key={sc}
-                type="button"
-                className="scale-btn"
-                data-active={Math.abs(readout.zoom - zoomForScale(sc, readout.lat)) < 0.05}
-                onClick={() => applyScale(sc)}
-              >
-                1:{sc}
-              </button>
-            ))}
+          <div className="scales">
+            <div className="layers-title">Scale</div>
+            <div className="scale-row">
+              {SCALES.map((sc) => (
+                <button
+                  key={sc}
+                  type="button"
+                  className="scale-btn"
+                  data-active={Math.abs(readout.zoom - zoomForScale(sc, readout.lat)) < 0.05}
+                  onClick={() => applyScale(sc)}
+                >
+                  1:{sc}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        </div>
+
+        {clean && (
+          <button className="exit-clean" type="button" onClick={() => setClean(false)}>
+            Exit screenshot mode · Esc
+          </button>
+        )}
 
         {note && <div className="toast">{note}</div>}
 

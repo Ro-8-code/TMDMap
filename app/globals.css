@@ -496,3 +496,35 @@ input::placeholder { color: var(--text-faint); }
 @media (max-width: 720px) {
   .side-panel { flex-direction: row; align-items: flex-start; max-width: calc(100% - 24px); }
 }
+
+/* ---------------------------- screenshot mode ---------------------------- */
+
+/* Everything goes except the map, its scale bar, and the OS attribution —
+   the attribution has to stay, both because OS require it in a conspicuous
+   position and because it then lands in the screenshot where it belongs. */
+.map-shell.is-clean .topbar,
+.map-shell.is-clean .side-panel,
+.map-shell.is-clean .readout,
+.map-shell.is-clean .banner,
+.map-shell.is-clean .maplibregl-ctrl-group {
+  display: none !important;
+}
+
+.exit-clean {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 30;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: rgba(20, 27, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.exit-clean:hover { opacity: 1; color: var(--text); }
