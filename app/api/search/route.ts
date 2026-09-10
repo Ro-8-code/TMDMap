@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireUser } from "@/lib/apiAuth";
 
 /**
  * Address / postcode search.
@@ -207,6 +208,9 @@ export async function GET(request: NextRequest) {
       return new NextResponse("Forbidden", { status: 403 });
     }
   }
+
+  const auth = await requireUser(request);
+  if ("error" in auth) return auth.error;
 
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) return NextResponse.json({ results: [] });

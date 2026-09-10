@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireUser, withinRateLimit } from "@/lib/apiAuth";
 import { rewriteUrls, toCadLinework, type AnyStyle } from "@/lib/cadStyle";
 
 /**
@@ -13,6 +14,14 @@ import { rewriteUrls, toCadLinework, type AnyStyle } from "@/lib/cadStyle";
 const NGD_BASE = "https://api.os.uk/maps/vector/ngd/ota/v1/collections/ngd-base";
 
 export async function GET(request: NextRequest) {
+  // Every request here spends OS transactions, so it has to be a signed-in
+  // user rather than anyone who knows the URL.
+  const auth = await requireUser(request);
+  if ("error" in auth) return auth.error;
+  if (!withinRateLimit(auth.userId)) {
+    return new NextResponse("Too many requests", { status: 429 });
+  }
+
   const key = process.env.OS_API_KEY;
   if (!key) {
     return NextResponse.json({ error: "OS_API_KEY not configured" }, { status: 404 });

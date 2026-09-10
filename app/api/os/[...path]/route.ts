@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requireUser, withinRateLimit } from "@/lib/apiAuth";
 
 /**
  * Generic proxy for the OS vector services — tiles, sprites and glyphs all
@@ -14,6 +15,14 @@ export async function GET(
   request: NextRequest,
   ctx: { params: Promise<{ path: string[] }> }
 ) {
+  // Every request here spends OS transactions, so it has to be a signed-in
+  // user rather than anyone who knows the URL.
+  const auth = await requireUser(request);
+  if ("error" in auth) return auth.error;
+  if (!withinRateLimit(auth.userId)) {
+    return new NextResponse("Too many requests", { status: 429 });
+  }
+
   const { path } = await ctx.params;
   const joined = path.join("/");
 

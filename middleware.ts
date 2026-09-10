@@ -49,5 +49,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/tiles|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // API routes are excluded deliberately: they run their own auth check with a
+  // short-lived cache, whereas middleware would hit Supabase over the network
+  // on every single map tile.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
