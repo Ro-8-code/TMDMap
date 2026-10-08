@@ -33,45 +33,57 @@ export type AnyStyle = {
  * gets a companion line layer drawn over the top of the fill.
  */
 const PAPER = "#ffffff";
-const DEFAULT_INK = "#6e6e6e";
-const TEXT = "#3f3f3f";
+const DEFAULT_INK = "#c0c0c0";
+const TEXT = "#8a8a8a";
 
 type Weight = { color: string; width: number };
 
-// Keyed on the NGD source-layer names. Anything not listed still gets sensible
-// defaults by layer type, so an OS schema change degrades rather than breaks.
+/**
+ * Ink weights, measured from real traffic management drawings rather than
+ * guessed.
+ *
+ * Sampling the base mapping in five issued Vision drawings gave core lines at
+ * #bababa-#bebebe with a median of #d0d0d0 — light grey, fine line. That is
+ * much lighter than looks right in isolation, and it is deliberate: the base
+ * map is a backdrop, and the cones, signs and hatching drawn over it are the
+ * content. An earlier attempt here used near-black building outlines, which
+ * would have fought the overlay and made the finished drawing unreadable.
+ *
+ * These sit a step stronger than the measured plot values because a designer
+ * has to work with them on screen before anything is plotted.
+ */
 const WEIGHTS: Record<string, Weight> = {
-  bld_fts_buildingpart: { color: "#1a1a1a", width: 1.3 },
-  Local_buildings: { color: "#1a1a1a", width: 1.1 },
-  District_buildings: { color: "#1a1a1a", width: 1.1 },
+  bld_fts_buildingpart: { color: "#8f8f8f", width: 0.9 },
+  Local_buildings: { color: "#8f8f8f", width: 0.8 },
+  District_buildings: { color: "#8f8f8f", width: 0.8 },
 
-  trn_fts_roadtrackorpath: { color: "#3d3d3d", width: 1.0 },
-  trn_fts_roadline: { color: "#3d3d3d", width: 1.0 },
-  Roads: { color: "#3d3d3d", width: 1.0 },
-  trn_ntwk_pathlink: { color: "#8a8a8a", width: 0.7 },
-  trn_fts_rail: { color: "#4a4a4a", width: 0.9 },
-  trn_fts_cartographicraildetail: { color: "#4a4a4a", width: 0.8 },
+  trn_fts_roadtrackorpath: { color: "#9e9e9e", width: 0.85 },
+  trn_fts_roadline: { color: "#9e9e9e", width: 0.85 },
+  Roads: { color: "#9e9e9e", width: 0.85 },
+  trn_ntwk_pathlink: { color: "#c4c4c4", width: 0.6 },
+  trn_fts_rail: { color: "#a8a8a8", width: 0.75 },
+  trn_fts_cartographicraildetail: { color: "#b4b4b4", width: 0.6 },
 
-  str_fts_structure: { color: "#5a5a5a", width: 0.85 },
-  str_fts_structureline: { color: "#6e6e6e", width: 0.75 },
-  str_fts_compoundstructure: { color: "#5a5a5a", width: 0.85 },
-  str_fts_fieldboundary: { color: "#9a9a9a", width: 0.6 },
+  str_fts_structure: { color: "#b0b0b0", width: 0.7 },
+  str_fts_structureline: { color: "#bcbcbc", width: 0.6 },
+  str_fts_compoundstructure: { color: "#b0b0b0", width: 0.7 },
+  str_fts_fieldboundary: { color: "#d0d0d0", width: 0.5 },
 
-  lnd_fts_land: { color: "#a2a2a2", width: 0.6 },
-  lnd_fts_landform: { color: "#a2a2a2", width: 0.6 },
-  lnd_fts_landformline: { color: "#a2a2a2", width: 0.6 },
+  lnd_fts_land: { color: "#d4d4d4", width: 0.5 },
+  lnd_fts_landform: { color: "#d4d4d4", width: 0.5 },
+  lnd_fts_landformline: { color: "#d4d4d4", width: 0.5 },
 
-  wtr_fts_water: { color: "#6f8fa6", width: 0.9 },
-  wtr_ntwk_waterlink: { color: "#6f8fa6", width: 0.8 },
-  Surfacewater: { color: "#6f8fa6", width: 0.9 },
-  Waterlines: { color: "#6f8fa6", width: 0.8 },
+  wtr_fts_water: { color: "#a9c2d2", width: 0.7 },
+  wtr_ntwk_waterlink: { color: "#a9c2d2", width: 0.6 },
+  Surfacewater: { color: "#a9c2d2", width: 0.7 },
+  Waterlines: { color: "#a9c2d2", width: 0.6 },
 };
 
 // Fills in this set are heavy enough to deserve a real stroke rather than the
 // one-pixel outline a fill layer can manage.
 const NEEDS_STROKE = new Set(
   Object.entries(WEIGHTS)
-    .filter(([, w]) => w.width >= 0.75)
+    .filter(([, w]) => w.width >= 0.7)
     .map(([name]) => name)
 );
 

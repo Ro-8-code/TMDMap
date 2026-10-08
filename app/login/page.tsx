@@ -27,6 +27,16 @@ function LoginForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
+    if (!error) {
+      // One login, one person. Signing in revokes every other session on this
+      // account, so a shared password logs the previous user out rather than
+      // letting two people work from the same seat.
+      await supabase.auth.signOut({ scope: "others" }).catch(() => {
+        // A failure here shouldn't block a legitimate sign-in; the session
+        // this user just created is still valid.
+      });
+    }
+
     if (error) {
       // Supabase returns a generic message when the email is unconfirmed.
       setError(
