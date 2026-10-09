@@ -87,7 +87,35 @@ const NEEDS_STROKE = new Set(
     .map(([name]) => name)
 );
 
-export function toCadLinework(style: AnyStyle): AnyStyle {
+/**
+ * How heavily the base map is drawn.
+ *
+ * "light" matches what was measured off issued drawings — core lines around
+ * #bababa, because the map is a backdrop and the TM overlay is the content.
+ * Heavier settings are offered because that is a judgement call, and whoever
+ * is drawing over it is better placed to make it than a measurement is.
+ */
+export type InkWeight = "light" | "medium" | "dark";
+
+/** Shifts a grey towards black. 0 = unchanged, 1 = black. */
+function darken(hex: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m || amount <= 0) return hex;
+  const n = parseInt(m[1], 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map((c) => Math.max(0, Math.round(c * (1 - amount))));
+  return "#" + ch.map((c) => c.toString(16).padStart(2, "0")).join("");
+}
+
+const INK_SCALE: Record<InkWeight, { darken: number; widen: number }> = {
+  light: { darken: 0, widen: 1 },
+  medium: { darken: 0.38, widen: 1.15 },
+  dark: { darken: 0.72, widen: 1.35 },
+};
+
+export function toCadLinework(style: AnyStyle, ink: InkWeight = "light"): AnyStyle {
+  const { darken: d, widen: w } = INK_SCALE[ink];
+  const tune = (c: string) => darken(c, d);
   const layers: Record<string, any>[] = [];
 
   for (const layer of style.layers) {
@@ -110,7 +138,7 @@ export function toCadLinework(style: AnyStyle): AnyStyle {
         // Keep the shape, drop the colour.
         next.paint["fill-color"] = PAPER;
         next.paint["fill-opacity"] = 1;
-        next.paint["fill-outline-color"] = weight?.color ?? DEFAULT_INK;
+        next.paint["fill-outline-color"] = tune(weight?.color ?? DEFAULT_INK);
         delete next.paint["fill-pattern"];
         layers.push(next);
 
@@ -124,16 +152,18 @@ export function toCadLinework(style: AnyStyle): AnyStyle {
             ...(layer.minzoom !== undefined ? { minzoom: layer.minzoom } : {}),
             ...(layer.maxzoom !== undefined ? { maxzoom: layer.maxzoom } : {}),
             layout: { "line-join": "round", "line-cap": "round" },
-            paint: { "line-color": weight!.color, "line-width": weight!.width },
+            paint: { "line-color": tune(weight!.color), "line-width": weight!.width * w },
           });
         }
         break;
       }
 
       case "line":
-        next.paint["line-color"] = weight?.color ?? DEFAULT_INK;
+        next.paint["line-color"] = tune(weight?.color ?? DEFAULT_INK);
         next.paint["line-opacity"] = 1;
-        next.paint["line-width"] = weight ? weight.width : thinLine(layer.paint?.["line-width"]);
+        next.paint["line-width"] = weight
+          ? weight.width * w
+          : thinLine(layer.paint?.["line-width"]);
         delete next.paint["line-pattern"];
         delete next.paint["line-gradient"];
         layers.push(next);
@@ -142,7 +172,7 @@ export function toCadLinework(style: AnyStyle): AnyStyle {
       case "symbol":
         // Street names and house numbers are half the value of a survey
         // drawing, so they stay — just in drawing ink.
-        next.paint["text-color"] = TEXT;
+        next.paint["text-color"] = tune(TEXT);
         next.paint["text-halo-color"] = PAPER;
         next.paint["text-halo-width"] = 1.4;
         delete next.layout["icon-image"];

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireUser, withinRateLimit } from "@/lib/apiAuth";
-import { rewriteUrls, toCadLinework, type AnyStyle } from "@/lib/cadStyle";
+import { rewriteUrls, toCadLinework, type AnyStyle, type InkWeight } from "@/lib/cadStyle";
 
 /**
  * Serves the OS NGD vector style, rewritten for drawing use.
@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
   // Web Mercator one, "27700" is British National Grid.
   const styleId = request.nextUrl.searchParams.get("style") ?? "3857";
   const mode = request.nextUrl.searchParams.get("mode") ?? "cad";
+  const inkParam = request.nextUrl.searchParams.get("ink");
+  const ink: InkWeight =
+    inkParam === "medium" || inkParam === "dark" ? inkParam : "light";
 
   const upstream = await fetch(`${NGD_BASE}/styles/${encodeURIComponent(styleId)}?key=${key}`, {
     headers: { Accept: "application/json" },
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
 
   const rewritten = rewriteUrls(style, origin);
-  const final = mode === "cad" ? toCadLinework(rewritten) : rewritten;
+  const final = mode === "cad" ? toCadLinework(rewritten, ink) : rewritten;
 
   return NextResponse.json(final, {
     headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" },

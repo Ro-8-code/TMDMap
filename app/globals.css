@@ -515,6 +515,32 @@ input::placeholder { color: var(--text-faint); }
   display: none !important;
 }
 
+/* In screenshot mode the acknowledgement moves out of the map and onto a thin
+   strip along the bottom edge. Clause 6.2 requires it in a conspicuous
+   position and it has to survive into the screenshot, but it does not have to
+   sit on top of the drawing area while someone is framing a site. */
+.map-shell.is-clean .map-area { padding-bottom: 16px; }
+
+.map-shell.is-clean .attrib {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 8px;
+  background: #ffffff;
+  border-top: 1px solid #e4e4e4;
+  text-shadow: none;
+  opacity: 1;
+  font-size: 8.5px;
+  color: #9a9a9a;
+}
+.map-shell.is-clean #map { bottom: 16px; }
+
 .exit-clean {
   position: absolute;
   top: 10px;

@@ -145,6 +145,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
   const [capturing, setCapturing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [clean, setClean] = useState(false);
+  const [ink, setInk] = useState<"light" | "medium" | "dark">("medium");
   const [exportingDxf, setExportingDxf] = useState(false);
 
   // Held in a ref so the export callback doesn't re-create on every layer swap.
@@ -157,7 +158,9 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: styleFor(osConfigured ? "ngd-cad" : "osm"),
+      style: osConfigured
+        ? `/api/ngd-style?mode=cad&ink=${ink}`
+        : styleFor("osm"),
       center: [-3.2, 54.5], // roughly centred on Great Britain
       // Must clear the NGD source's minzoom of 6, or the default basemap opens
       // on a blank white page.
@@ -187,6 +190,19 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
       mapRef.current = null;
     };
   }, [osConfigured]);
+
+  // Changing ink weight reloads the style. The view is held so the map does
+  // not jump while someone is comparing weights.
+  const firstInk = useRef(ink);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || ink === firstInk.current) return;
+    firstInk.current = ink;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    map.setStyle(`/api/ngd-style?mode=cad&ink=${ink}`);
+    map.once("styledata", () => map.jumpTo({ center, zoom }));
+  }, [ink]);
 
   // Swapping basemap: replace the style but hold the current view, so
   // switching layers never loses the location you searched for.
@@ -492,6 +508,23 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         <div id="map" ref={containerRef} />
 
         <div className="side-panel">
+          <div className="scales">
+            <div className="layers-title">Map weight</div>
+            <div className="scale-row">
+              {(["light", "medium", "dark"] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  className="scale-btn"
+                  data-active={w === ink}
+                  onClick={() => setInk(w)}
+                >
+                  {w[0].toUpperCase() + w.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="scales">
             <div className="layers-title">Scale</div>
             <div className="scale-row">
