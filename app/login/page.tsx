@@ -30,9 +30,20 @@ function LoginForm() {
     if (!error) {
       // Note the device before anything else, so a sign-in from somewhere new
       // is on record even if the session is revoked moments later.
-      await recordSignIn(supabase).catch(() => {
-        // History is a convenience, not a gate — never block a valid login.
-      });
+      const seen = await recordSignIn(supabase).catch(() => null);
+
+      // Alert on a device we haven't seen before. Fire-and-forget: an alert
+      // that fails must never stop someone legitimate getting in.
+      if (seen?.isNew) {
+        void fetch("/api/security/new-device", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            label: seen.history[0]?.label ?? "",
+            deviceId: seen.history[0]?.id ?? "",
+          }),
+        }).catch(() => {});
+      }
 
       // One login, one person. Signing in revokes every other session on this
       // account, so a shared password logs the previous user out rather than
