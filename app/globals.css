@@ -631,3 +631,16 @@ input::placeholder { color: var(--text-faint); }
 
   .empty-state { max-width: calc(100% - 48px); }
 }
+
+/* Who is signed in, always visible. Makes a shared login obvious to whoever
+   is sitting in front of it. */
+.whoami {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-family: var(--mono, ui-monospace, Menlo, monospace);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) { .whoami { display: none; } }

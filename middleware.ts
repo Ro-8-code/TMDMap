@@ -4,7 +4,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "./lib/supab
 import { emailAllowed } from "./lib/apiAuth";
 
 const PROTECTED = ["/map"];
-const AUTH_PAGES = ["/login", "/signup"];
+const AUTH_PAGES = ["/login"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

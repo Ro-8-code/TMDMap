@@ -125,7 +125,13 @@ function styleFor(layerId: LayerId): string | StyleSpecification {
   };
 }
 
-export default function MapView({ osConfigured }: { osConfigured: boolean }) {
+export default function MapView({
+  osConfigured,
+  account = "",
+}: {
+  osConfigured: boolean;
+  account?: string;
+}) {
   const mapRef = useRef<MLMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -298,7 +304,7 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
     setCapturing(true);
     setNote(null);
     try {
-      const blob = await captureMap(map, label || query, attributionRef.current);
+      const blob = await captureMap(map, label || query, attributionRef.current, account);
       const c = map.getCenter();
       const name = captureFilename(label || query, c.lat, c.lng);
 
@@ -496,6 +502,8 @@ export default function MapView({ osConfigured }: { osConfigured: boolean }) {
         >
           {capturing ? "Exporting…" : "Export PNG"}
         </button>
+
+        {account && <span className="whoami" title="Signed in as">{account}</span>}
 
         <form action="/auth/signout" method="post">
           <button className="linkbtn" type="submit">

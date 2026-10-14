@@ -43,7 +43,8 @@ function niceBarLength(maxMetres: number) {
 export async function captureMap(
   map: MLMap,
   label: string,
-  attribution: string
+  attribution: string,
+  account = ""
 ): Promise<Blob> {
   const src = map.getCanvas();
   const centre = map.getCenter();
@@ -134,7 +135,16 @@ export async function captureMap(
   // Attribution, right-aligned — it has to travel with the image.
   ctx.textAlign = "right";
   ctx.font = `${Math.round(10 * dpr)}px ui-sans-serif, system-ui, sans-serif`;
-  ctx.fillText(attribution, out.width - pad, src.height + Math.round(48 * dpr));
+  ctx.fillText(attribution, out.width - pad, src.height + Math.round(36 * dpr));
+
+  // The account this came from. Deliberately legible rather than hidden: a
+  // drawing produced on someone else's login carries their address, which
+  // makes sharing a login cost the person who shared it.
+  if (account) {
+    ctx.fillStyle = "#8a8a8a";
+    ctx.font = `${Math.round(9 * dpr)}px ui-monospace, Menlo, monospace`;
+    ctx.fillText(`Issued via TMDMap · ${account}`, out.width - pad, src.height + Math.round(50 * dpr));
+  }
   ctx.textAlign = "left";
 
   return new Promise((resolve, reject) => {

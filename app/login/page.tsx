@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import Link from "next/link";
 import { Brand } from "../brand";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseConfigured } from "@/lib/supabase/env";
@@ -115,7 +114,7 @@ function LoginForm() {
       </form>
 
       <p className="auth-foot">
-        No account yet? <Link href="/signup">Create one</Link>
+        Accounts are issued by the administrator. Contact us if you need access.
       </p>
     </div>
   );
