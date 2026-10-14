@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { Map as MLMap, type StyleSpecification } from "maplibre-gl";
 import { Brand } from "../brand";
+import type { SignIn } from "@/lib/devices";
 import { gridRef } from "@/lib/osgb";
 import { captureFilename, captureMap, metresPerPixel, zoomForScale } from "@/lib/capture";
 
@@ -128,9 +129,11 @@ function styleFor(layerId: LayerId): string | StyleSpecification {
 export default function MapView({
   osConfigured,
   account = "",
+  signIns = [],
 }: {
   osConfigured: boolean;
   account?: string;
+  signIns?: SignIn[];
 }) {
   const mapRef = useRef<MLMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -152,6 +155,7 @@ export default function MapView({
   const [note, setNote] = useState<string | null>(null);
   const [clean, setClean] = useState(false);
   const [ink, setInk] = useState<"light" | "medium" | "dark">("medium");
+  const [showSecurity, setShowSecurity] = useState(false);
   const [exportingDxf, setExportingDxf] = useState(false);
 
   // Held in a ref so the export callback doesn't re-create on every layer swap.
@@ -413,6 +417,13 @@ export default function MapView({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  // Distinct devices other than the one most recently used — a quiet signal
+  // that the login has been used somewhere else.
+  const unseenDevices = (() => {
+    const ids = new Set(signIns.map((s) => s.id));
+    return Math.max(0, ids.size - 1);
+  })();
+
   const currentLayer = LAYERS.find((l) => l.id === layerId)!;
   attributionRef.current = currentLayer.attribution;
 
@@ -503,7 +514,17 @@ export default function MapView({
           {capturing ? "Exporting…" : "Export PNG"}
         </button>
 
-        {account && <span className="whoami" title="Signed in as">{account}</span>}
+        {account && (
+          <button
+            type="button"
+            className={unseenDevices > 0 ? "whoami whoami-alert" : "whoami"}
+            onClick={() => setShowSecurity((v) => !v)}
+            title="Signed in as — click for recent sign-ins"
+          >
+            {account}
+            {unseenDevices > 0 && <span className="whoami-dot">{unseenDevices}</span>}
+          </button>
+        )}
 
         <form action="/auth/signout" method="post">
           <button className="linkbtn" type="submit">
@@ -564,6 +585,39 @@ export default function MapView({
               Type an address, street or postcode above. Ordnance Survey
               topography is only published from zoom 15 — at this scale the map
               is intentionally near-empty.
+            </p>
+          </div>
+        )}
+
+        {showSecurity && (
+          <div className="security-panel">
+            <div className="security-head">
+              <strong>Recent sign-ins</strong>
+              <button type="button" onClick={() => setShowSecurity(false)}>×</button>
+            </div>
+            {signIns.length === 0 ? (
+              <p className="security-empty">No history recorded yet.</p>
+            ) : (
+              <ul>
+                {signIns.slice(0, 10).map((s, i) => (
+                  <li key={`${s.id}-${s.at}-${i}`} data-new={s.isNew}>
+                    <span className="security-device">
+                      {s.label}
+                      {s.isNew && <em> new device</em>}
+                    </span>
+                    <span className="security-when">
+                      {new Date(s.at).toLocaleString("en-GB", {
+                        day: "2-digit", month: "short",
+                        hour: "2-digit", minute: "2-digit",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="security-note">
+              Every export carries this account's address. If a device here
+              isn't yours, change the password.
             </p>
           </div>
         )}

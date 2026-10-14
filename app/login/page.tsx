@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { Brand } from "../brand";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseConfigured } from "@/lib/supabase/env";
+import { recordSignIn } from "@/lib/devices";
 
 function LoginForm() {
   const router = useRouter();
@@ -27,6 +28,12 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (!error) {
+      // Note the device before anything else, so a sign-in from somewhere new
+      // is on record even if the session is revoked moments later.
+      await recordSignIn(supabase).catch(() => {
+        // History is a convenience, not a gate — never block a valid login.
+      });
+
       // One login, one person. Signing in revokes every other session on this
       // account, so a shared password logs the previous user out rather than
       // letting two people work from the same seat.

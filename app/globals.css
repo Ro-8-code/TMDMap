@@ -644,3 +644,64 @@ input::placeholder { color: var(--text-faint); }
   text-overflow: ellipsis;
 }
 @media (max-width: 720px) { .whoami { display: none; } }
+
+/* --------------------------- sign-in history ---------------------------- */
+
+.whoami {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.whoami:hover { border-color: var(--ink-600); color: var(--text-dim); }
+
+/* More than one device on the account is worth noticing, not alarming. */
+.whoami-alert { color: #d8b45a; border-color: rgba(216, 180, 90, 0.35); }
+.whoami-dot {
+  background: #d8b45a;
+  color: var(--ink-900);
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 100px;
+  padding: 1px 6px;
+}
+
+.security-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 40;
+  width: 320px;
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  font-size: 12.5px;
+}
+.security-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.security-head button {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-faint); font-size: 18px; line-height: 1;
+}
+.security-panel ul { list-style: none; margin: 0; padding: 0; }
+.security-panel li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--ink-700);
+}
+.security-panel li:last-child { border-bottom: none; }
+.security-device { color: var(--text-dim); }
+.security-device em { color: #d8b45a; font-style: normal; font-weight: 700; font-size: 10.5px; }
+.security-when { color: var(--text-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.security-empty, .security-note {
+  color: var(--text-faint); font-size: 11.5px; line-height: 1.5; margin: 10px 0 0;
+}
